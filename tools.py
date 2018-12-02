@@ -1,4 +1,5 @@
 import numpy as np
+from itertools import izip
 
 WORDS = set()
 TAGS = set()
@@ -120,7 +121,7 @@ def not_tagged(file_name):
 
 def word_dict(words, vector):
     dict = {}
-    for word, vector in zip(open(words), open(vector)):
+    for word, vector in izip(open(words), open(vector)):
         word = word.strip(NEW_LINE).strip()
         vector = vector.strip(NEW_LINE).strip().split(" ")
         dict[word] = np.asanyarray(map(float, vector))
