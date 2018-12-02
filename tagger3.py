@@ -1,37 +1,68 @@
 import numpy as np
-import torch
-import tools
 import sys
-from torch.utils.data import Dataset, DataLoader
-from torch.utils.data.sampler import SubsetRandomSampler
-from torchvision import datasets, transforms
+import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
+import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from matplotlib.legend_handler import HandlerLine2D
 
 # Global vars
-LR = 0.01
-BATCH_SIZE = 1024
+LR = 0.005
+BATCH_SIZE = 2048
 INPUT_SIZE = 250
 WIN_SIZE = 5
 EPOCHS = 3
 EMBEDDING_SIZE = 50
-HIDDEN_SIZE_1 = 100
+HIDDEN_SIZE_1 = 150
 HIDDEN_SIZE_2 = 50
+SUFFIX = 3
+PREFIX = 3
+
+embeddings_needed = bool(int(sys.argv[2]))
+if embeddings_needed:
+    import tools2 as tools
+else:
+    import tools
 
 
 class NeuralNet(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, pre_trained, input_size):
         super(NeuralNet, self).__init__()
         self.input_size = WIN_SIZE * EMBEDDING_SIZE
-        self.E = nn.Embedding(len(tools.WORDS), EMBEDDING_SIZE)
         self.fc0 = nn.Linear(input_size, HIDDEN_SIZE_1)
         self.fc1 = nn.Linear(HIDDEN_SIZE_1, len(tools.TAGS))
+        if not pre_trained:
+            self.E = nn.Embedding(len(tools.WORDS), EMBEDDING_SIZE)
+        else:
+            self.E = nn.Embedding(tools.E.shape[0], tools.E.shape[1])
+            self.E.weight.data.copy_(torch.from_numpy(tools.E))
+        self.pref_index = {suff: i for i, suff in enumerate(self.prefs)}
+        self.suff_index = {suff: i for i, suff in enumerate(self.suffs)}
+        self.prefs = {word[:PREFIX] for word in tools.WORDS}
+        self.suffs = {word[:-SUFFIX] for word in tools.WORDS}
+        self.E_pref = nn.Embedding(len(self.prefs), EMBEDDING_SIZE)
+        self.E_suff = nn.Embedding(len(self.suffs), EMBEDDING_SIZE)
+        self.prefs = list(self.prefs)
+        self.suffs = list(self.suffs)
 
     def forward(self, v):
-        v = self.E(v).view(-1, self.input_size)
+        pref_var = v.data.numpy().copy()
+        suff_var = v.data.numpy().copy()
+        pref_var = pref_var.reshape(-1)
+        suff_var = suff_var.reshape(-1)
+        pref_var = [self.prefs[self.prefix_to_index[tools.I2W[index][:PREFIX]]]
+                    for index in pref_var]
+        suff_var = [self.suffs[self.suffix_to_index[tools.I2W[index][:-SUFFIX]]]
+                    for index in suff_var]
+        pref_var = [self.pref_index[pref] for pref in pref_var]
+        suff_var = [self.suff_index[suff] for suff in suff_var]
+        pref_var = np.asanyarray(pref_var)
+        suff_var = np.asanyarray(suff_var)
+        pref_var = torch.from_numpy(pref_var.reshape(x.data.shape)).type(torch.LongTensor)
+        suff_var = torch.from_numpy(suff_var.reshape(x.data.shape)).type(torch.LongTensor)
+
+        v = (self.E(v) + self.E_pref(pref_var) + self.E_suff(suff_var)).view(-1, self.input_size)
         v = F.tanh(self.fc0(v))
         v = self.fc1(v)
         return F.log_softmax(v, dim=1)
@@ -132,10 +163,12 @@ def plot_graphs(avg_valid_loss, valid_accuracy):
                       label='Validation average loss')
     plt.legend(handler_map={line1: HandlerLine2D(numpoints=4)})
     plt.show()
+    plt.savefig('avg_loss.png')
     line2, = plt.plot(valid_accuracy.keys(), valid_accuracy.values(),
                       label='Validation average accuracy')
     plt.legend(handler_map={line2: HandlerLine2D(numpoints=4)})
     plt.show()
+    plt.savefig('accuracy.png')
 
 
 def load_data(file_name, dev):
@@ -155,11 +188,11 @@ def main(args):
     global LR
     type = args[0]
     if type is 'ner':
-        LR = 0.05
+        LR = 0.01
     train = load_data(type + '/train', False)
     valid = load_data(type + '/dev', True)
     test = tools.not_tagged(type + '/test')
-    model = NeuralNet(INPUT_SIZE)
+    model = NeuralNet(embeddings_needed)
     optimizer = optim.Adam(model.parameters(), LR)
 
     trainer = Trainer(train, valid, test, model, optimizer)

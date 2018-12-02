@@ -18,9 +18,9 @@ def creates_dicts(words, tags):
     global W2I, I2W, T2I, I2T
     words.update(set([START, END]))
     W2I = {word: i for i, word in enumerate(words)}
-    I2W = {i: word for word, i in W2I.iteritems()}
+    I2W = {i: word for word, i in W2I.items()}
     T2I = {tag: i for i, tag in enumerate(tags)}
-    I2T = {i: tag for tag, i in T2I.iteritems()}
+    I2T = {i: tag for tag, i in T2I.items()}
 
 
 def word_index(word):
