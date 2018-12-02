@@ -1,4 +1,3 @@
-import torch
 from itertools import izip
 import numpy as np
 
@@ -121,9 +120,9 @@ def not_tagged(file_name):
 
 
 def word_dict(words, vector):
-    word_dict = {}
+    dict = {}
     for word, vector in izip(open(words), open(vector)):
         word = word.strip(NEW_LINE).strip()
         vector = vector.strip(NEW_LINE).strip().split(" ")
-        word_dict[word] = np.asanyarray(map(float, vector))
-    return word_dict
+        dict[word] = np.asanyarray(map(float, vector))
+    return dict

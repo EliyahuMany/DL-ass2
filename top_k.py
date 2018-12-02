@@ -2,16 +2,15 @@ import tools
 import numpy as np
 
 
-def find_similar(word, k):
+def find_similar(word, n):
     word_dict = tools.word_dict('vocab.txt', 'wordVectors.txt')
     u = word_dict[word]
     distances = []
     for x in word_dict:
         calc = cos_distance(u, word_dict[x])
         distances.append([x, calc])
-
     distances = sorted(distances, key=distance)
-    top_k = sorted(distances, key=distance, reverse=True)[1:k + 1]
+    top_k = sorted(distances, key=distance, reverse=True)[1:n + 1]
     top_k = [item[0] for item in top_k]
     return top_k
 
