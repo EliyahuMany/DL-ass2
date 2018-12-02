@@ -1,3 +1,7 @@
+import torch
+from itertools import izip
+import numpy as np
+
 WORDS = set()
 TAGS = set()
 NEW_LINE = '\n'
@@ -114,3 +118,12 @@ def not_tagged(file_name):
             w = line.strip("\n").strip()
             sentence.append(w)
     return windows(sentences)
+
+
+def word_dict(words, vector):
+    word_dict = {}
+    for word, vector in izip(open(words), open(vector)):
+        word = word.strip(NEW_LINE).strip()
+        vector = vector.strip(NEW_LINE).strip().split(" ")
+        word_dict[word] = np.asanyarray(map(float, vector))
+    return word_dict
